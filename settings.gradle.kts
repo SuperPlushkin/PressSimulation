@@ -1,1 +1,1 @@
-rootProject.name = "SuperPressSimulation"
+rootProject.name = "PressSimulation"

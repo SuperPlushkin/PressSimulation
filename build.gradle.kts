@@ -22,8 +22,8 @@ tasks.withType<JavaCompile> {
 }
 
 application {
-    mainModule.set("org.example.superpresssimulation")
-    mainClass.set("org.example.superpresssimulation.HelloApplication")
+    mainModule.set("org.example.presssimulation")
+    mainClass.set("org.example.presssimulation.SimulationManager")
 }
 
 javafx {

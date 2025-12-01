@@ -1,5 +1,5 @@
-module org.example.superpresssimulation {
+module org.example.presssimulation {
     requires javafx.controls;
 
-    exports org.example.superpresssimulation;
+    exports org.example.presssimulation;
 }
