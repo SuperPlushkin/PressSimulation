@@ -6,6 +6,7 @@ import javafx.scene.shape.Rectangle;
 import javafx.scene.text.Text;
 
 public class Material extends Pane {
+    public static final double MATERIAL_SIZE = 80;
 
     private static final Color DEFAULT_COLOR = Color.GOLD;
     private static final Color BROKEN_COLOR = Color.DARKGRAY;
@@ -20,29 +21,29 @@ public class Material extends Pane {
     private boolean isBroken = false;
     private double currentForce = 0;
 
-    public Material(double x, double y, double size, String name, double compressiveStrengthMPa, boolean isFragile, double contactArea) {
+    public Material(double x, double y, String name, double compressiveStrengthMPa, boolean isFragile, double contactArea) {
         this.name = name;
         this.compressiveStrength = compressiveStrengthMPa * 1_000_000; // Конвертируем МПа в Па
         this.destructionForce = this.compressiveStrength * contactArea; // F = σ × A
         this.isFragile = isFragile;
         this.contactArea = contactArea;
-        this.size = size;
+        this.size = 80;
 
-        createShape(x, y, size);
+        createShape(x, y, 80);
         createLabel();
     }
 
-    public static Material createSteel(double x, double y, double contactArea, double size) {
-        return new Material(x, y, size, "Сталь", 250, false, contactArea);
+    public static Material createSteel(double x, double y, double contactArea) {
+        return new Material(x, y, "Сталь", 250, false, contactArea);
     }
-    public static Material createConcrete(double x, double y, double contactArea, double size) {
-        return new Material(x, y, size, "Бетон", 30, true, contactArea);
+    public static Material createConcrete(double x, double y, double contactArea) {
+        return new Material(x, y, "Бетон", 30, true, contactArea);
     }
-    public static Material createGlass(double x, double y, double contactArea, double size) {
-        return new Material(x, y, size, "Стекло", 50, true, contactArea);
+    public static Material createGlass(double x, double y, double contactArea) {
+        return new Material(x, y, "Стекло", 50, true, contactArea);
     }
-    public static Material createWood(double x, double y, double contactArea, double size) {
-        return new Material(x, y, size, "Дерево", 40, false, contactArea);
+    public static Material createWood(double x, double y, double contactArea) {
+        return new Material(x, y, "Дерево", 40, false, contactArea);
     }
 
     private void createShape(double x, double y, double size) {

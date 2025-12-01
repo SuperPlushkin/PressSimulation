@@ -33,4 +33,5 @@ javafx {
 
 dependencies {
     implementation("org.controlsfx:controlsfx:11.2.1")
+    implementation("org.yaml:snakeyaml:2.2")
 }

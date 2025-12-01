@@ -1,0 +1,33 @@
+system_settings:
+  max_pressure: 2.703703728933183E8
+  pressure_increment: 3.3666666666666664E7
+  contact_area: 0.01
+materials:
+- name: Сталь
+  strength_mpa: 250.0
+  fragile: false
+  contact_area: 0.01
+- name: Бетон
+  strength_mpa: 30.0
+  fragile: true
+  contact_area: 0.01
+- name: Стекло
+  strength_mpa: 50.0
+  fragile: true
+  contact_area: 0.01
+- name: Дерево
+  strength_mpa: 40.0
+  fragile: false
+  contact_area: 0.01
+- name: Мой материал
+  strength_mpa: 50.0
+  fragile: true
+  contact_area: 0.01
+- name: Мой материал
+  strength_mpa: 50.0
+  fragile: false
+  contact_area: 0.01
+- name: Мой материал
+  strength_mpa: 50.0
+  fragile: false
+  contact_area: 0.01

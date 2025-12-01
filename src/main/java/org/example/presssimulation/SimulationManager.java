@@ -16,6 +16,8 @@ import javafx.scene.paint.Color;
 import javafx.scene.shape.Rectangle;
 import javafx.stage.Stage;
 
+import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 public class SimulationManager extends Application {
@@ -56,7 +58,6 @@ public class SimulationManager extends Application {
         simulationPane.setPrefSize(500, SCENE_HEIGHT);
 
 
-
         double centerX = 250;
         double centerY = SCENE_HEIGHT / 2;
 
@@ -64,12 +65,12 @@ public class SimulationManager extends Application {
         tube.setFill(Color.GRAY);
         tube.setStroke(Color.BLACK);
 
+        double materialX = centerX + (TUBE_WIDTH / 2 - 20) - Material.MATERIAL_SIZE;
+        double materialY = centerY - (Material.MATERIAL_SIZE / 2);
 
-        double materialSize = 80;
-        double materialX = centerX + (TUBE_WIDTH / 2 - 20) - materialSize;
-        double materialY = centerY - (materialSize / 2);
+        loadSettings(materialX, materialY);
 
-        material = Material.createGlass(materialX, materialY, 0.01, materialSize);
+        material = Material.createGlass(materialX, materialY, 0.01);
         piston = new Piston(centerX - TUBE_WIDTH / 2 + 20, centerY - 50, CONTACT_AREA);
 
         simulationPane.getChildren().addAll(tube, material, piston);
@@ -84,8 +85,7 @@ public class SimulationManager extends Application {
         root.setCenter(simulationPane);
         root.setRight(infoPanel);
 
-        initializeMaterials(materialX, materialY, materialSize);
-
+        initializeMaterials(materialX, materialY);
 
 
         Scene scene = new Scene(root, SCENE_WIDTH, SCENE_HEIGHT, Color.LIGHTGRAY);
@@ -103,17 +103,25 @@ public class SimulationManager extends Application {
         Label title = new Label("СИМУЛЯТОР ПРЕССА");
         title.setStyle("-fx-font-size: 16; -fx-font-weight: bold;");
 
-        // Кнопка информации
         Button infoButton = new Button("Информация");
         infoButton.setStyle("-fx-font-size: 12; -fx-padding: 5 10;");
         infoButton.setOnAction(e -> showInfoDialog());
         infoButton.setFocusTraversable(false);
 
-        // Кнопка настроек параметров системы
         Button settingsButton = new Button("Настроить параметры системы");
         settingsButton.setStyle("-fx-font-size: 12; -fx-padding: 5 10;");
         settingsButton.setOnAction(e -> showSettingsDialog());
         settingsButton.setFocusTraversable(false);
+
+        Button saveButton = new Button("Сохранить всё в YAML");
+        saveButton.setStyle("-fx-font-size: 11; -fx-padding: 3 8;");
+        saveButton.setFocusTraversable(false);
+        saveButton.setOnAction(e -> saveAllToYaml());
+
+        Button reloadButton = new Button("Загрузить из YAML");
+        reloadButton.setStyle("-fx-font-size: 11; -fx-padding: 3 8;");
+        reloadButton.setFocusTraversable(false);
+        reloadButton.setOnAction(e -> reloadFromYaml());
 
         Label modeTitle = new Label("РЕЖИМ СИМУЛЯЦИИ:");
         modeTitle.setStyle("-fx-font-size: 12; -fx-font-weight: bold;");
@@ -127,7 +135,6 @@ public class SimulationManager extends Application {
         modeToggleButton.setOnAction(e -> toggleSimulationMode());
 
 
-        // ComboBox для выбора материалов
         Label materialSelectLabel = new Label("Выбор материала:");
         materialSelectLabel.setStyle("-fx-font-size: 12; -fx-font-weight: bold;");
 
@@ -137,12 +144,10 @@ public class SimulationManager extends Application {
         materialComboBox.setCellFactory(param -> new MaterialListCell());
         materialComboBox.setButtonCell(new MaterialListCell());
 
-        // Слушатель выбора материала
         materialComboBox.getSelectionModel().selectedItemProperty().addListener((obs, oldVal, newVal) -> {
             if (newVal != null) switchMaterial(newVal);
         });
 
-        // Кнопка добавления пользовательского материала
         Button addMaterialButton = new Button("Добавить материал");
         addMaterialButton.setStyle("-fx-font-size: 11; -fx-padding: 3 8;");
         addMaterialButton.setFocusTraversable(false);
@@ -171,12 +176,11 @@ public class SimulationManager extends Application {
         forceLabel = new Label("Сила: 0 кН");
         forceLabel.setStyle("-fx-font-size: 12;");
 
-        // Краткая справка по управлению
         Label quickControls = new Label("Управление:\n→ - вперед (только мануал)\n← - назад (только мануал)\nR - сброс");
         quickControls.setStyle("-fx-font-size: 11; -fx-text-fill: #666;");
 
         panel.getChildren().addAll(
-            title, infoButton, settingsButton, modeTitle, modeLabel, modeToggleButton,
+            title, infoButton, settingsButton, saveButton, reloadButton, modeTitle, modeLabel, modeToggleButton,
             materialSelectLabel, materialComboBox, addMaterialButton, systemParamsLabel,
             materialInfoLabel, pressureLabel, forceLabel, quickControls
         );
@@ -294,6 +298,8 @@ public class SimulationManager extends Application {
 
         Optional<ButtonType> result = dialog.showAndWait();
         if (result.isPresent() && result.get() == ButtonType.OK) {
+            YamlManager.saveAll(MAX_PRESSURE, PRESSURE_INCREMENT, CONTACT_AREA, materialList);
+
             updateSystemParameters();
             if (resetSimulationCheckbox.isSelected())
                 resetSimulation();
@@ -331,18 +337,40 @@ public class SimulationManager extends Application {
         }
     }
 
-    private void initializeMaterials(double x, double y, double size) {
-        double contactArea = 0.01;
+    private void loadSettings(double defaultX, double defaultY) {
+        if (YamlManager.loadSystemSettings() instanceof Map<String, Double> settings) {
+            MAX_PRESSURE = settings.get("max_pressure");
+            PRESSURE_INCREMENT = settings.get("pressure_increment");
+            CONTACT_AREA = settings.get("contact_area");
+        } else {
+            YamlManager.createDefaultFile(defaultX, defaultY);
 
-        materialList = FXCollections.observableArrayList(
-                Material.createSteel(x, y, contactArea, size),
-                Material.createConcrete(x, y, contactArea, size),
-                Material.createGlass(x, y, contactArea, size),
-                Material.createWood(x, y, contactArea, size)
-        );
+            if (YamlManager.loadSystemSettings() instanceof Map<String, Double> settings) {
+                MAX_PRESSURE = settings.get("max_pressure");
+                PRESSURE_INCREMENT = settings.get("pressure_increment");
+                CONTACT_AREA = settings.get("contact_area");
+            }
+        }
+    }
+    private void initializeMaterials(double x, double y) {
+        if (YamlManager.loadMaterials(x, y) instanceof List<Material> loadedMaterials && !loadedMaterials.isEmpty()) {
+            materialList = FXCollections.observableArrayList(loadedMaterials);
+        }
+        else {
+            materialList = FXCollections.observableArrayList(
+                Material.createSteel(x, y, 0.01),
+                Material.createConcrete(x, y, 0.01),
+                Material.createGlass(x, y, 0.01),
+                Material.createWood(x, y, 0.01)
+            );
+
+            YamlManager.saveAll(MAX_PRESSURE, PRESSURE_INCREMENT, CONTACT_AREA, materialList);
+        }
 
         materialComboBox.setItems(materialList);
-        materialComboBox.getSelectionModel().select(0);
+        if (!materialList.isEmpty()) {
+            materialComboBox.getSelectionModel().select(0);
+        }
     }
     private void switchMaterial(Material selectedMaterial) {
         int index = simulationPane.getChildren().indexOf(material);
@@ -408,8 +436,8 @@ public class SimulationManager extends Application {
 
             // Создание нового материала
             Material customMaterial = new Material(
-                    material.getX(), material.getY(), 80,
-                    name, strength, isFragile, material.getContactArea()
+                material.getX(), material.getY(),
+                name, strength, isFragile, material.getContactArea()
             );
 
             // Добавление в список и выбор
@@ -421,12 +449,12 @@ public class SimulationManager extends Application {
             successAlert.setTitle("Успех");
             successAlert.setHeaderText("Материал создан");
             successAlert.setContentText(String.format(
-                    "Материал '%s' успешно создан!\nПрочность: %.0f МПа\nТип: %s",
-                    name, strength, isFragile ? "хрупкий" : "пластичный"
+                "Материал '%s' успешно создан!\nПрочность: %.0f МПа\nТип: %s",
+                name, strength, isFragile ? "хрупкий" : "пластичный"
             ));
             successAlert.showAndWait();
-
-        } catch (NumberFormatException e) {
+        }
+        catch (NumberFormatException e) {
             Alert errorAlert = new Alert(Alert.AlertType.ERROR);
             errorAlert.setTitle("Ошибка");
             errorAlert.setHeaderText("Неверный ввод");
@@ -588,5 +616,72 @@ public class SimulationManager extends Application {
 
         forceLabel.setText("Сила: 0 кН");
         forceLabel.setStyle("-fx-font-size: 12; -fx-text-fill: black;");
+    }
+
+    private void saveAllToYaml() {
+        pauseSimulation();
+
+        YamlManager.saveAll(MAX_PRESSURE, PRESSURE_INCREMENT, CONTACT_AREA, materialList);
+
+        Alert info = new Alert(Alert.AlertType.INFORMATION);
+        info.setTitle("Успех");
+        info.setHeaderText(null);
+        info.setContentText("Все данные сохранены в файле settings.yaml");
+        info.showAndWait();
+
+        resumeSimulation();
+    }
+    private void reloadFromYaml() {
+        pauseSimulation();
+
+        Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
+        alert.setTitle("Загрузка данных");
+        alert.setHeaderText("Вы уверены?");
+        alert.setContentText("Текущие настройки и материалы будут заменены данными из файла.");
+
+        Optional<ButtonType> result = alert.showAndWait();
+        if (result.isPresent() && result.get() == ButtonType.OK) {
+            Map<String, Double> settings = YamlManager.loadSystemSettings();
+            if (settings != null) {
+                MAX_PRESSURE = settings.get("max_pressure");
+                PRESSURE_INCREMENT = settings.get("pressure_increment");
+                CONTACT_AREA = settings.get("contact_area");
+                updateSystemParameters();
+                piston.setPistonArea(CONTACT_AREA);
+            }
+
+            List<Material> loadedMaterials = YamlManager.loadMaterials(material.getX(), material.getY());
+            if (loadedMaterials != null && !loadedMaterials.isEmpty()) {
+                // Очищаем список и добавляем загруженные материалы
+                materialList.clear();
+                materialList.addAll(loadedMaterials);
+
+                // Обновляем текущий материал (берём первый из списка)
+                Material newMaterial = materialList.get(0);
+
+                // Обновляем позицию на панели
+                int index = simulationPane.getChildren().indexOf(material);
+                if (index >= 0) {
+                    newMaterial.setLayoutX(material.getLayoutX());
+                    newMaterial.setLayoutY(material.getLayoutY());
+                    simulationPane.getChildren().set(index, newMaterial);
+                    material = newMaterial;
+                }
+
+                // Обновляем ComboBox
+                materialComboBox.getSelectionModel().select(0);
+                updateMaterialInfo();
+            }
+
+            resetSimulation();
+
+            Alert info = new Alert(Alert.AlertType.INFORMATION);
+            info.setTitle("Успех");
+            info.setHeaderText(null);
+            info.setContentText("Данные загружены из файла settings.yaml");
+            info.showAndWait();
+        }
+
+        resumeSimulation();
     }
 }
