@@ -27,9 +27,9 @@ public class Material extends Pane {
         this.destructionForce = this.compressiveStrength * contactArea; // F = σ × A
         this.isFragile = isFragile;
         this.contactArea = contactArea;
-        this.size = 80;
+        this.size = MATERIAL_SIZE;
 
-        createShape(x, y, 80);
+        createShape(x, y, size);
         createLabel();
     }
 
